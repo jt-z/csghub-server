@@ -1,0 +1,51 @@
+### example_sft.yaml
+### LLaMAFactory SFT Training Configuration Example
+
+# Model configuration
+model_name_or_path: Qwen/Qwen2-0.5B
+template: qwen2
+finetuning_type: lora
+
+# Training hyperparameters
+stage: sft
+do_train: true
+
+# Dataset configuration
+dataset: phone_en
+dataset_dir: /workspace/data
+cutoff_len: 512
+
+# LoRA configuration
+lora_rank: 8
+lora_alpha: 16
+lora_dropout: 0.05
+lora_target: all
+
+# Output configuration
+output_dir: /workspace/output
+overwrite_output_dir: true
+overwrite_cache: true
+
+# Training steps configuration
+num_train_epochs: 3
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 16
+warmup_ratio: 0.1
+
+# Optimizer configuration
+learning_rate: 1.0e-5
+weight_decay: 0.01
+lr_scheduler_type: cosine
+
+# Gradient configuration
+max_grad_norm: 1.0
+gradient_checkpointing: true
+
+# Precision configuration
+bf16: true
+# fp16: true  # Alternative to bf16
+
+# Logging and saving
+logging_steps: 10
+save_steps: 100
+save_total_limit: 2
