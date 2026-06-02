@@ -17,12 +17,15 @@ var (
 )
 
 const (
-	OrderDetailID      = "order_detail_id"
-	MeterFromSource    = "from_source"
-	PromptTokenNum     = "prompt_token_num"
-	CompletionTokenNum = "completion_token_num"
-	OwnerType          = "owner_type"
-	ConsumeApiKey      = "api_key"
+	OrderDetailID        = "order_detail_id"
+	MeterFromSource      = "from_source"
+	PromptTokenNum       = "prompt_token_num"
+	CompletionTokenNum   = "completion_token_num"
+	OwnerType            = "owner_type"
+	ConsumeApiKey        = "api_key"
+	CompletionDataType   = "completion_data_type"
+	CompletionResolution = "completion_resolution"
+	CompletionDuration   = "completion_duration"
 )
 
 type OrderStatus int
@@ -39,6 +42,7 @@ var (
 type SkuUnitType string
 
 var (
+	UnitSecond SkuUnitType = "second" // audio/video duration
 	UnitMinute SkuUnitType = "minute"
 	UnitDay    SkuUnitType = "day"
 	UnitWeek   SkuUnitType = "week"
@@ -47,6 +51,7 @@ var (
 	UnitToken  SkuUnitType = "token"
 	UnitRepo   SkuUnitType = "repository"
 	UnitByte   SkuUnitType = "byte"
+	UnitCount  SkuUnitType = "count" // count of image/audio/video
 )
 
 type ACCTStatus int
@@ -64,32 +69,33 @@ var (
 type SKUType int
 
 var (
-	SKUReserve    SKUType = 0 // system reserve
-	SKUCSGHub     SKUType = 1 // csghub server
-	SKUStarship   SKUType = 2 // starship
-	SKUAgenticHub SKUType = 3 // agentic hub
+	SKUReserve  SKUType = 0 // system reserve
+	SKUCSGHub   SKUType = 1 // csghub server
+	SKUStarship SKUType = 2 // starship
 )
 
 type SKUKind int
 
 var (
-	SKUPayAsYouGo      SKUKind = 1 // Time-based billing Pay-as-you-go
-	SKUTimeSpan        SKUKind = 2 // monthly or yearly billing
-	SKUPackageAddon    SKUKind = 3 // Package addon time-based billing
-	SKUPromptToken     SKUKind = 4 // Token-based billing of prompt
-	SKUCompletionToken SKUKind = 5 // Token-based billing of completion
+	SKUPayAsYouGo           SKUKind = 1 // Time-based billing Pay-as-you-go
+	SKUTimeSpan             SKUKind = 2 // monthly or yearly billing
+	SKUPackageAddon         SKUKind = 3 // Package addon time-based billing
+	SKUPromptToken          SKUKind = 4 // Token-based billing of prompt
+	SKUCompletionToken      SKUKind = 5 // Token-based billing of completion
+	SKUPromptMultiModal     SKUKind = 6 // Multi Model LLM Prompt for image/audio/video
+	SKUCompletionMultiModal SKUKind = 7 // Multi Model LLM completion for image/audio/video
+)
+
+type SkuStatus int
+
+var (
+	SkuStatusEnabled  SkuStatus = 1 // price is enabled and active
+	SkuStatusDisabled SkuStatus = 9 // price is disabled/deprecated, 2~8 are reserved for future use
 )
 
 var (
 	ChargeBalance     string = "balance"
 	ChargeCashBalance string = "cash_balance"
-)
-
-// HTTP Header constants for scene detection
-const (
-	SceneHeaderKey        = "X-Scene"    // HTTP header key for scene detection
-	SceneHeaderCSGHub     = "csghub"     // For SceneModelServerless (15)
-	SceneHeaderAgenticHub = "agentichub" // For SceneAgenticHub (30)
 )
 
 type SceneType int
@@ -101,16 +107,16 @@ var (
 	SceneCashCharge      SceneType = 3 // cash charge from user payment
 	ScenePaySubscription SceneType = 4 // pay subscription and reduce fee
 	// csghub
-	SceneModelInference  SceneType = 10 // model inference endpoint
-	SceneSpace           SceneType = 11 // csghub space
-	SceneModelFinetune   SceneType = 12 // model finetune
-	SceneMultiSync       SceneType = 13 // multi source sync
-	SceneEvaluation      SceneType = 14 // model evaluation
-	SceneModelServerless SceneType = 15 // serverless and external model from aigateway
+	SceneModelInference       SceneType = 10 // model inference endpoint
+	SceneSpace                SceneType = 11 // csghub space
+	SceneModelFinetune        SceneType = 12 // model finetune
+	SceneMultiSync            SceneType = 13 // multi source sync
+	SceneEvaluation           SceneType = 14 // model evaluation
+	SceneModelServerless      SceneType = 15 // serverless and external model from aigateway
+	SceneMultiModalServerless SceneType = 16 // Multi modal model from aigateway for image/audio/video
 	// starship
 	SceneStarship SceneType = 20 // starship
 	SceneGuiAgent SceneType = 22 // gui agent
-	// SceneAgenticHub SceneType = 30 // agentic hub
 	// dataset
 	SceneDatasetPurchase SceneType = 40 // dataset purchase
 	// unknow
@@ -151,6 +157,7 @@ var (
 	TimeDurationMinType ChargeValueType = 0
 	TokenNumberType     ChargeValueType = 1
 	QuotaNumberType     ChargeValueType = 2
+	CountNumberType     ChargeValueType = 3
 )
 
 type AcctEventReq struct {
@@ -181,6 +188,9 @@ type AcctEventReq struct {
 	ApiKey           string          `json:"api_key"`
 	Purpose          RechargePurpose `json:"purpose"`
 	PurposeDesc      string          `json:"purpose_desc"`
+	DataType         string          `json:"data_type"`
+	Resolution       string          `json:"resolution"`
+	Duration         float64         `json:"duration"`
 }
 
 // generate charge event from client
@@ -300,9 +310,9 @@ type RechargeReq struct {
 }
 
 type AcctQuotaReq struct {
-	RepoCountLimit int64 `json:"repo_count_limit"`
-	SpeedLimit     int64 `json:"speed_limit"`
-	TrafficLimit   int64 `json:"traffic_limit"`
+	RepoCountLimit int64 `json:"repo_count_limit" binding:"required,min=0"`
+	SpeedLimit     int64 `json:"speed_limit" binding:"required,min=0"`
+	TrafficLimit   int64 `json:"traffic_limit" binding:"required,min=0"`
 }
 
 type AcctQuotaStatementReq struct {
@@ -357,32 +367,52 @@ type MeteringEvent struct {
 }
 
 type AcctPriceCreateReq struct {
-	SkuType          SKUType     `json:"sku_type"`
-	SkuPrice         int64       `json:"sku_price"`
-	SkuUnit          int64       `json:"sku_unit"`
-	SkuDesc          string      `json:"sku_desc"`
-	ResourceID       string      `json:"resource_id"`
-	SkuUnitType      SkuUnitType `json:"sku_unit_type"`
+	SkuType          SKUType     `json:"sku_type" binding:"required,oneof=1 2"`
+	SkuPrice         int64       `json:"sku_price" binding:"required,min=0"`
+	SkuUnit          int64       `json:"sku_unit" binding:"required,min=1"`
+	SkuDesc          string      `json:"sku_desc" binding:"required"`
+	ResourceID       string      `json:"resource_id" binding:"required"`
+	SkuUnitType      SkuUnitType `json:"sku_unit_type" binding:"required"`
 	SkuPriceCurrency string      `json:"sku_price_currency"`
-	SkuKind          SKUKind     `json:"sku_kind"`
+	SkuKind          SKUKind     `json:"sku_kind" binding:"required"`
 	Quota            string      `json:"quota"`
 	SkuPriceID       int64       `json:"sku_price_id"`
 	Discount         float64     `json:"discount" binding:"omitempty,min=0,max=1"`
 	UseLimitPrice    int64       `json:"use_limit_price"`
+	Resolution       string      `json:"resolution"`
+	SkuStatus        SkuStatus   `json:"sku_status" binding:"required,oneof=1 9"`
+}
+
+type AcctPriceUpdateReq struct {
+	SkuType          *SKUType     `json:"sku_type"`
+	SkuPrice         *int64       `json:"sku_price"`
+	SkuUnit          *int64       `json:"sku_unit"`
+	SkuDesc          *string      `json:"sku_desc"`
+	ResourceID       *string      `json:"resource_id"`
+	SkuUnitType      *SkuUnitType `json:"sku_unit_type"`
+	SkuPriceCurrency *string      `json:"sku_price_currency"`
+	SkuKind          *SKUKind     `json:"sku_kind"`
+	Quota            *string      `json:"quota"`
+	SkuPriceID       *int64       `json:"sku_price_id"`
+	Discount         *float64     `json:"discount"`
+	UseLimitPrice    *int64       `json:"use_limit_price"`
+	Resolution       *string      `json:"resolution"`
+	SkuStatus        *SkuStatus   `json:"sku_status"`
 }
 
 type AcctPriceResp struct {
-	Id               int64   `json:"id"`
-	SkuType          SKUType `json:"sku_type"`
-	SkuPrice         int64   `json:"sku_price"`
-	SkuUnit          int64   `json:"sku_unit"`
-	SkuDesc          string  `json:"sku_desc"`
-	ResourceID       string  `json:"resource_id"`
-	SkuUnitType      string  `json:"sku_unit_type"`
-	SkuPriceCurrency string  `json:"sku_price_currency"`
-	SkuKind          SKUKind `json:"sku_kind"`
-	Quota            string  `json:"quota"`
-	SkuPriceID       int64   `json:"sku_price_id"`
+	Id               int64     `json:"id"`
+	SkuType          SKUType   `json:"sku_type"`
+	SkuPrice         int64     `json:"sku_price"`
+	SkuUnit          int64     `json:"sku_unit"`
+	SkuDesc          string    `json:"sku_desc"`
+	ResourceID       string    `json:"resource_id"`
+	SkuUnitType      string    `json:"sku_unit_type"`
+	SkuPriceCurrency string    `json:"sku_price_currency"`
+	SkuKind          SKUKind   `json:"sku_kind"`
+	Quota            string    `json:"quota"`
+	SkuPriceID       int64     `json:"sku_price_id"`
+	SkuStatus        SkuStatus `json:"sku_status"`
 }
 
 type AcctPriceQueryReq struct {
@@ -390,7 +420,8 @@ type AcctPriceQueryReq struct {
 	ResourceID  string    `json:"resource_id"`
 	PriceTime   time.Time `json:"price_time"`
 	SkuKind     SKUKind   `json:"sku_kind"`
-	SkuUnitType string    `json:"sku_unit_type"`
+	SkuUnitType []string  `json:"sku_unit_type"`
+	Resolution  string    `json:"resolution"`
 }
 
 type AcctOrderDetailReq struct {
@@ -421,13 +452,14 @@ type AcctOrderExpiredEvent struct {
 //
 // in accounting price DB
 type AcctPriceListDBReq struct {
-	SkuType    SKUType  `json:"sku_type"`
-	SkuKind    string   `json:"sku_kind"`
-	ResourceID []string `json:"resource_id"`
-	SortBy     string   `json:"sort_by"`
-	SortOrder  string   `json:"sort_order"`
-	Per        int      `json:"per"`
-	Page       int      `json:"page"`
+	SkuType    SKUType   `json:"sku_type"`
+	SkuKind    string    `json:"sku_kind"`
+	ResourceID []string  `json:"resource_id"`
+	SkuStatus  SkuStatus `json:"sku_status"`
+	SortBy     string    `json:"sort_by"`
+	SortOrder  string    `json:"sort_order"`
+	Per        int       `json:"per"`
+	Page       int       `json:"page"`
 }
 
 type AcctPriceListByKindsReq struct {
@@ -436,17 +468,15 @@ type AcctPriceListByKindsReq struct {
 	ResourceID string    `json:"resource_id"`
 }
 
-// used for listing prices with pagination and filter
-//
-// in accounting service and starhub server
 type AcctPriceListReq struct {
 	SkuType    SKUType             `json:"sku_type" form:"sku_type"`
 	SkuKind    string              `json:"sku_kind" form:"sku_kind"`
 	ResourceID []string            `json:"resource_id" form:"resource_id"`
+	SkuStatus  SkuStatus           `json:"sku_status" form:"sku_status,default=1"`
 	Filter     AcctPriceListFilter `json:"-"`
 	SortBy     string              `json:"sort_by" form:"sort_by" binding:"omitempty,oneof=resource_id"`
 	SortOrder  string              `json:"sort_order" form:"sort_order" binding:"omitempty,oneof=ASC DESC asc desc"`
-	Per        int                 `json:"per" form:"per,default=50" binding:"min=1,max=100"`
+	Per        int                 `json:"per" form:"per,default=50" binding:"min=1"`
 	Page       int                 `json:"page" form:"page,default=1" binding:"min=1"`
 }
 
@@ -629,7 +659,7 @@ type PresentsIndexResp struct {
 }
 
 type SetLowBalanceWarnReq struct {
-	LowBalanceWarn float64 `json:"low_balance_warn"`
+	LowBalanceWarn float64 `json:"low_balance_warn" binding:"required,gt=0"`
 	UserUUID       string  `json:"user_uuid"`
 }
 
@@ -738,16 +768,16 @@ type AccInvoiceDashboardReq struct {
 }
 
 type AccInvoiceCreateReq struct {
-	TargetUUID  string  `json:"-"`
-	CurrentUser string  `json:"-"` // current user for permission check
-	TitleID     int64   `json:"title_id" binding:"required"`
-	BillCycle   string  `json:"bill_cycle" binding:"required"`
+	TargetUUID    string  `json:"-"`
+	CurrentUser   string  `json:"-"` // current user for permission check
+	TitleID       int64   `json:"title_id" binding:"required"`
+	BillCycle     string  `json:"bill_cycle" binding:"required"`
 	InvoiceAmount float64 `json:"invoice_amount" binding:"required"`
 }
 
 type AccInvoicableReq struct {
 	TargetUUID  string `json:"-"`
-	CurrentUser string `json:"-"` // current user for permission check
+	CurrentUser string `json:"-"`                                 // current user for permission check
 	Page        int    `json:"page" binding:"min=1"`              // Current page number
 	PageSize    int    `json:"page_size" binding:"min=1,max=100"` // Number of items per page
 	StartMonth  string `json:"start_month"`

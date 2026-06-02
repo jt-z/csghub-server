@@ -598,7 +598,7 @@ func createActivityLogRoutes(apiGroup *gin.RouterGroup, middlewareCollection mid
 	}
 
 	handler := handler.NewActivityLogHandler(comp)
-	apiGroup.GET("/activity_logs", middlewareCollection.Auth.NeedAPIKey, handler.List)
+	apiGroup.GET("/admin/activity_logs", middlewareCollection.Auth.NeedAdmin, handler.List)
 	return nil
 }
 

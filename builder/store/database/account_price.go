@@ -7,6 +7,7 @@ import (
 
 	"github.com/uptrace/bun"
 
+	"opencsg.com/csghub-server/common/errorx"
 	"opencsg.com/csghub-server/common/types"
 )
 
@@ -51,6 +52,8 @@ type AccountPrice struct {
 	SkuPriceID       int64             `json:"sku_price_id"`
 	Discount         float64           `json:"discount"` // discount rate, e.g. 0.9 means 10% discount
 	UseLimitPrice    int64             `json:"use_limit_price"`
+	Resolution       string            `json:"resolution"`
+	SkuStatus        types.SkuStatus   `bun:",default:1" json:"sku_status"`
 	times
 }
 
@@ -87,7 +90,7 @@ func (a *accountPriceStoreImpl) GetByID(ctx context.Context, id int64) (*Account
 	price := &AccountPrice{}
 	err := a.db.Core.NewSelect().Model(price).Where("id = ?", id).Scan(ctx, price)
 	if err != nil {
-		return nil, fmt.Errorf("select price by id %d, error: %w", id, err)
+		return nil, errorx.HandleDBError(err, errorx.Ctx().Set("id", id))
 	}
 	return price, nil
 }
@@ -97,9 +100,11 @@ func (a *accountPriceStoreImpl) GetLatestByTime(ctx context.Context, req types.A
 	err := a.db.Core.NewSelect().Model(price).
 		Where("sku_type = ?", req.SkuType).
 		Where("sku_kind = ?", req.SkuKind).
+		Where("sku_status = ?", types.SkuStatusEnabled).
 		Where("resource_id = ?", req.ResourceID).
-		Where("sku_unit_type = ?", req.SkuUnitType).
+		Where("sku_unit_type IN (?)", bun.In(req.SkuUnitType)).
 		Where("created_at <= ?", req.PriceTime).
+		Where("resolution = ?", req.Resolution).
 		Order("created_at DESC").Limit(1).Scan(ctx, price)
 	if err != nil {
 		return nil, fmt.Errorf("select price by time, error: %w", err)
@@ -109,9 +114,7 @@ func (a *accountPriceStoreImpl) GetLatestByTime(ctx context.Context, req types.A
 
 func (a *accountPriceStoreImpl) ListBySkuType(ctx context.Context, req types.AcctPriceListDBReq) ([]AccountPrice, int, error) {
 	var result []AccountPrice
-	q := a.db.Core.NewSelect().Model(&result).
-		DistinctOn("sku_type, sku_kind, resource_id, sku_unit_type").
-		Where("sku_type = ?", req.SkuType)
+	q := a.db.Core.NewSelect().Model(&result).Where("sku_type = ?", req.SkuType)
 
 	if len(req.SkuKind) > 0 {
 		skuKindInt, err := strconv.Atoi(req.SkuKind)
@@ -131,6 +134,10 @@ func (a *accountPriceStoreImpl) ListBySkuType(ctx context.Context, req types.Acc
 		q.Where("resource_id IN (?)", bun.In(resourceIDs))
 	}
 
+	if req.SkuStatus > 0 {
+		q.Where("sku_status = ?", req.SkuStatus)
+	}
+
 	count, err := q.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to counting recorder, error: %w", err)
@@ -140,6 +147,7 @@ func (a *accountPriceStoreImpl) ListBySkuType(ctx context.Context, req types.Acc
 		"sku_kind":      "ASC",
 		"resource_id":   "ASC",
 		"sku_unit_type": "ASC",
+		"sku_status":    "ASC",
 		"created_at":    "DESC",
 	}
 
@@ -150,6 +158,7 @@ func (a *accountPriceStoreImpl) ListBySkuType(ctx context.Context, req types.Acc
 		Order(fmt.Sprintf("%s %s", "sku_kind", sortMap["sku_kind"])).
 		Order(fmt.Sprintf("%s %s", "resource_id", sortMap["resource_id"])).
 		Order(fmt.Sprintf("%s %s", "sku_unit_type", sortMap["sku_unit_type"])).
+		Order(fmt.Sprintf("%s %s", "sku_status", sortMap["sku_status"])).
 		Order(fmt.Sprintf("%s %s", "created_at", sortMap["created_at"])).
 		Limit(req.Per).Offset((req.Page-1)*req.Per).Exec(ctx, &result)
 	if err != nil {
@@ -173,11 +182,12 @@ func (a *accountPriceStoreImpl) ListByIds(ctx context.Context, ids []int64) ([]*
 	res := make([]*types.AcctPriceResp, len(result))
 	for index, price := range result {
 		res[index] = &types.AcctPriceResp{
-			Id:       price.ID,
-			SkuType:  price.SkuType,
-			SkuPrice: price.SkuPrice,
-			SkuKind:  price.SkuKind,
-			SkuDesc:  price.SkuDesc,
+			Id:        price.ID,
+			SkuType:   price.SkuType,
+			SkuPrice:  price.SkuPrice,
+			SkuKind:   price.SkuKind,
+			SkuDesc:   price.SkuDesc,
+			SkuStatus: price.SkuStatus,
 		}
 	}
 
@@ -187,7 +197,9 @@ func (a *accountPriceStoreImpl) ListByIds(ctx context.Context, ids []int64) ([]*
 func (a *accountPriceStoreImpl) ListBySkuTypeAndKinds(ctx context.Context, req types.AcctPriceListByKindsReq) ([]AccountPrice, error) {
 	var result []AccountPrice
 	q := a.db.Core.NewSelect().Model(&result).
-		Where("sku_type = ?", req.SkuType).Where("sku_kind IN (?)", bun.In(req.SkuKinds))
+		Where("sku_type = ?", req.SkuType).
+		Where("sku_kind IN (?)", bun.In(req.SkuKinds)).
+		Where("sku_status = ?", types.SkuStatusEnabled)
 
 	if req.ResourceID != "" {
 		q.Where("resource_id = ?", req.ResourceID)
