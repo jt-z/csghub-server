@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONFIG_FILE="${CONFIG_FILE:-/etc/csghub/example_sft.yaml}"
+CONFIG_FILE="${CONFIG_FILE:-/etc/csghub/train_scripts/example_sft.yaml}"
 
 echo "=== LlamaFactory SFT Training with YAML Config ==="
 echo "Config: ${CONFIG_FILE}"
