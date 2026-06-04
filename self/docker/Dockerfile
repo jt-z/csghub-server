@@ -46,6 +46,7 @@ COPY llama-factory/ /etc/csghub/
 
 RUN mkdir -p /var/log/supervisord && \
     chmod +x /etc/csghub/*.sh && \
+    chmod +x /etc/csghub/train_scripts/*.sh &&\
     chmod +x /etc/csghub/*.py && \
     mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension && \
 	echo '{"theme":"JupyterLab Dark"}' > /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/themes.jupyterlab-settings && \
