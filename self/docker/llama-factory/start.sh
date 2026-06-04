@@ -30,7 +30,8 @@ fi
 
 sed -i "s|and repo_type != constants.REPO_TYPE_MODEL||g" /usr/local/lib/python3.11/dist-packages/huggingface_hub/hf_api.py
 
-export GRADIO_ROOT_PATH="/"
+# 本地测试，取消NGINX反向代理的路径前缀 "/" “proxy/” ，之后就可以了 
+export GRADIO_ROOT_PATH=""
 ascend_env=/usr/local/Ascend/ascend-toolkit/set_env.sh
 if [ -f "$ascend_env" ]; then
     source $ascend_env
