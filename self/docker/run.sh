@@ -6,6 +6,7 @@ DOCKER_IMAGE_NAME="llama-factory-local"
 DOCKER_IMAGE_TAG="v0.9.5"
 
 WORKSPACE_DIR="${PWD}/workspace"
+LLAMA_FACTORY_DIR="${PWD}/llama-factory"
 mkdir -p ${WORKSPACE_DIR}
 
 echo "=== Running Llama-Factory container ==="
@@ -23,6 +24,7 @@ docker run -it --rm \
     -p 8000:8000 \
     -p 7860:7860 \
     -v ${WORKSPACE_DIR}:/workspace \
+    -v ${LLAMA_FACTORY_DIR}:/workspace/llama-factory \
     -e REPO_ID="" \
     -e REVISION="" \
     -e CONTEXT_PATH="/" \
