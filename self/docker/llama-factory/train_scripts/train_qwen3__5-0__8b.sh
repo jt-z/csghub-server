@@ -24,7 +24,7 @@ CUDA_VISIBLE_DEVICES=0 llamafactory-cli train \
     --dataset_dir /workspace/data \
     --template qwen3_nothink \
     --finetuning_type lora \
-    --lora_rank 8 \
+    --lora_rank 4 \
     --lora_target all \
     --output_dir ${OUTPUT_DIR} \
     --overwrite_output_dir true \
@@ -34,14 +34,14 @@ CUDA_VISIBLE_DEVICES=0 llamafactory-cli train \
     --plot_loss true \
     --report_to none \
     --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 8 \
+    --gradient_accumulation_steps 2 \
     --learning_rate ${LEARNING_RATE} \
     --num_train_epochs ${TRAIN_EPOCHS} \
     --lr_scheduler_type cosine \
     --warmup_ratio 0.1 \
     --bf16 true \
     --ddp_timeout 180000000 \
-    --cutoff_len 2048 \
+    --cutoff_len 1024 \
     --max_samples 1000 \
     --preprocessing_num_workers 16 \
     --dataloader_num_workers 4
